@@ -6,7 +6,7 @@ describe "README examples" do
     matches.each do |match|
       c = match[0]
       index = Regexp.last_match.offset(0).first
-      line = content[..index].lines.count
+      line = content[0..index].lines.count
       eval(c, binding, "README.md", line)
     end
   end
