@@ -29,8 +29,10 @@ sushi = Product.create!(name: "Sour Sushi Itamae")
 # Basic options
 bread_condition = Product.search_name("bread")
 expect(Product.where(bread_condition)).to match_array [sour_bread, rye_bread]
+
 ita_condition = Product.search_name("ita", prefix: true)
 expect(Product.where(ita_condition)).to match_array [italian_pasta, sushi]
+
 nonsour_condition = Product.search_name("!sour")
 expect(Product.where(nonsour_condition)).to match_array [italian_pasta, rye_bread]
 
