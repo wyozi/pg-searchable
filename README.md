@@ -42,6 +42,13 @@ nonsour_or_ita = Product.where(nonsour_condition.or(ita_condition))
 expect(nonsour_or_ita).to match_array [rye_bread, italian_pasta, sushi]
 ```
 
+### Development
+
+**Testing locally:**
+
+1. Start local Postgres: `bin/local-docker-testing`
+2. Run tests: `bundle exec rspec`
+
 ### Credits
 
 pg_search provided much of the inspiration and basis
