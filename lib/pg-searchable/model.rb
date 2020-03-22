@@ -60,6 +60,21 @@ module PgSearchable
         x # TODO
       end
   
+      def self.tsquery(query, opts)
+        query_terms = query.split(" ").compact
+        tsq =
+          if query.blank?
+            Arel::Nodes.build_quoted("")
+          elsif opts[:raw] || opts[:websearch]
+            Arel::Nodes.build_quoted(query)
+          else
+            tsquery_for_terms(query_terms, prefix: opts[:prefix])
+          end
+  
+        fn_name = opts[:websearch] ? "websearch_to_tsquery" : "to_tsquery"
+        Arel::Nodes::NamedFunction.new(fn_name, [dictionary, tsq])
+      end
+  
       def self.tsquery_for_terms(terms, prefix:)
         terms = terms.map { |term| tsquery_term(term, prefix: prefix) }
         terms.inject do |memo, term|
@@ -95,21 +110,6 @@ module PgSearchable
         terms.inject do |memo, term|
           Arel::Nodes::InfixOperation.new("||", memo, Arel::Nodes.build_quoted(term))
         end
-      end
-  
-      def self.tsquery(query, opts)
-        query_terms = query.split(" ").compact
-        tsq =
-          if query.blank?
-            Arel::Nodes.build_quoted("")
-          elsif opts[:raw] || opts[:websearch]
-            Arel::Nodes.build_quoted(query)
-          else
-            tsquery_for_terms(query_terms, prefix: opts[:prefix])
-          end
-  
-        fn_name = opts[:websearch] ? "websearch_to_tsquery" : "to_tsquery"
-        Arel::Nodes::NamedFunction.new(fn_name, [dictionary, tsq])
       end
     end
   end
