@@ -16,14 +16,12 @@ module PgSearchable
     end
 
     class Searcher
+      DISALLOWED_TSQUERY_CHARACTERS = /['?\\:‘’]/.freeze
+
       def initialize(model)
         @model = model
       end
-  
-      def dictionary
-        Arel::Nodes.build_quoted(:simple)
-      end
-  
+
       def exec(column_name, query, raw:false, prefix:false, websearch:false)
         column_ref = "#{@model.quoted_table_name}.#{column_name}"
   
@@ -38,7 +36,7 @@ module PgSearchable
           websearch: websearch
         }
   
-        query = Builder.tsquery(query, opts)
+        query = tsquery(query, opts)
   
         condition = Arel::Nodes::Grouping.new(
           Arel::Nodes::InfixOperation.new("@@", vector, query)
@@ -46,21 +44,18 @@ module PgSearchable
   
         condition
       end
-    end
-  
-    module Builder
-  
-      DISALLOWED_TSQUERY_CHARACTERS = /['?\\:‘’]/.freeze
-  
-      def self.dictionary
+      
+      private
+
+      def dictionary
         Arel::Nodes.build_quoted(:simple)
       end
-  
-      def self.normalize(x)
+
+      def normalize(x)
         x # TODO
       end
-  
-      def self.tsquery(query, opts)
+
+      def tsquery(query, opts)
         query_terms = query.split(" ").compact
         tsq =
           if query.blank?
@@ -75,7 +70,7 @@ module PgSearchable
         Arel::Nodes::NamedFunction.new(fn_name, [dictionary, tsq])
       end
   
-      def self.tsquery_for_terms(terms, prefix:)
+      def tsquery_for_terms(terms, prefix:)
         terms = terms.map { |term| tsquery_term(term, prefix: prefix) }
         terms.inject do |memo, term|
           term_anded = Arel::Nodes::InfixOperation.new("||", Arel::Nodes.build_quoted(" & "), term)
@@ -83,7 +78,7 @@ module PgSearchable
         end
       end
   
-      def self.tsquery_term(unsanitized_term, prefix:)
+      def tsquery_term(unsanitized_term, prefix:)
         negated = false
   
         if unsanitized_term.start_with?("!")
@@ -98,7 +93,7 @@ module PgSearchable
       # After this, the SQL expression evaluates to a string containing the term surrounded by single-quotes.
       # If :prefix is true, then the term will have :* appended to the end.
       # If :negated is true, then the term will have ! prepended to the front.
-      def self.tsquery_expression(term, negated:, prefix:)
+      def tsquery_expression(term, negated:, prefix:)
         terms = [
           (Arel::Nodes.build_quoted('!') if negated),
           Arel::Nodes.build_quoted("' "),
