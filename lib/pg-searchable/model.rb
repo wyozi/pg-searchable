@@ -24,15 +24,21 @@ module PgSearchable
         Arel::Nodes.build_quoted(:simple)
       end
   
-      def exec(column_name, query, raw:false, prefix:false)
+      def exec(column_name, query, raw:false, prefix:false, websearch:false)
         column_ref = "#{@model.quoted_table_name}.#{column_name}"
   
         vector = Arel::Nodes::NamedFunction.new(
           "to_tsvector",
           [dictionary, Arel.sql(column_ref)]
         )
+
+        opts = {
+          prefix: prefix,
+          raw: raw,
+          websearch: websearch
+        }
   
-        query = Builder.tsquery(query, prefix: prefix, raw: raw)
+        query = Builder.tsquery(query, opts)
   
         condition = Arel::Nodes::Grouping.new(
           Arel::Nodes::InfixOperation.new("@@", vector, query)
@@ -91,18 +97,19 @@ module PgSearchable
         end
       end
   
-      def self.tsquery(query, prefix:, raw:)
+      def self.tsquery(query, opts)
         query_terms = query.split(" ").compact
         tsq =
           if query.blank?
             Arel::Nodes.build_quoted("")
-          elsif raw
+          elsif opts[:raw] || opts[:websearch]
             Arel::Nodes.build_quoted(query)
           else
-            tsquery_for_terms(query_terms, prefix: prefix)
+            tsquery_for_terms(query_terms, prefix: opts[:prefix])
           end
   
-        Arel::Nodes::NamedFunction.new("to_tsquery", [dictionary, tsq])
+        fn_name = opts[:websearch] ? "websearch_to_tsquery" : "to_tsquery"
+        Arel::Nodes::NamedFunction.new(fn_name, [dictionary, tsq])
       end
     end
   end

@@ -26,7 +26,7 @@ italian_pasta = Product.create!(name: "Italian pasta")
 rye_bread = Product.create!(name: "Rye bread")
 sushi = Product.create!(name: "Sour Sushi Itamae")
 
-# Basic options
+# Basic usage
 bread_condition = Product.search_name("bread")
 expect(Product.where(bread_condition)).to match_array [sour_bread, rye_bread]
 
@@ -36,12 +36,20 @@ expect(Product.where(ita_condition)).to match_array [italian_pasta, sushi]
 nonsour_condition = Product.search_name("!sour")
 expect(Product.where(nonsour_condition)).to match_array [italian_pasta, rye_bread]
 
-# Composing searches
+# Use Postgres built-in websearch
+ws_condition = Product.search_name("sushi or pasta", websearch: true)
+expect(Product.where(ws_condition)).to match_array [sushi, italian_pasta]
+
+# Composing basic searches
 non_sour_breads = Product.where(bread_condition.and(nonsour_condition))
 expect(non_sour_breads).to match_array [rye_bread]
 
 nonsour_or_ita = Product.where(nonsour_condition.or(ita_condition))
 expect(nonsour_or_ita).to match_array [rye_bread, italian_pasta, sushi]
+
+# Advanced options
+raw_condition = Product.search_name("sushi | pasta", raw: true)
+expect(Product.where(raw_condition)).to match_array [sushi, italian_pasta]
 ```
 
 ### Development
